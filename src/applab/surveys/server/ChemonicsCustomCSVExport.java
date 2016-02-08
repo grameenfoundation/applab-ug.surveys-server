@@ -31,21 +31,27 @@ public class ChemonicsCustomCSVExport {
 
 	public static void main(String[] args) throws URISyntaxException {
 
-		if(args == null || args.length == 0) {
-			System.out.println("Last run date was not provided. Exiting...");
+		if(args == null || args.length <= 1) {
+			System.out.println();
+			System.out.println("See correct usage below");
+			System.out.println("\t <jar-file> date survey-id");
+			System.out.println("\t\t date 		=> This is the datetime from which to begin importing data e.g \"2015-10-23 16:26:45\"");
+			System.out.println("\t\t survey-id 	=> This is the salesforce survey id of the survey whose data is to be exported e.g 20150947072");
+			System.out.println();
 			return;
 		}
-		if(args.length > 1) {
-			args[0] = args[0] + " " + args[1];
-		}
+		//if(args.length > 1) {
+		//	args[0] = args[0] + " " + args[1];
+		//}
 		System.out.println("Processing started...");
 		System.out.println("In start date = " + args[0]);
+		System.out.println("In survey-id  = " + args[1]);
 		try {
 			Calendar calFrom = Calendar.getInstance();
 			calFrom.setTime(sdf.parse(args[0]));
 			Date calTo = Calendar.getInstance().getTime();
 			
-			doApplabGet(args[0], sdf.format(calTo));
+			doApplabGet(args[0], sdf.format(calTo), args[1]);
 			
 			if(successfull) {
 		        File targetFile = new File("./last_run");
@@ -71,7 +77,7 @@ public class ChemonicsCustomCSVExport {
 		} 
 	}
 
-	protected static void doApplabGet(String startDateStr, String endDateStr) throws ClassNotFoundException, SQLException,
+	protected static void doApplabGet(String startDateStr, String endDateStr, String salesforceSurveyId) throws ClassNotFoundException, SQLException,
 			IOException, ServiceException, ParseException, SAXException, ParserConfigurationException {
 
 		DownloadType.valueOf("Csv");
@@ -84,13 +90,11 @@ public class ChemonicsCustomCSVExport {
 		    case SubmissionCsv:
 		
 		        // Extract the request data
-		        String salesforceSurveyId = "20150336609";
+		        //String salesforceSurveyId = "20150947072";
 		
 		        // Extract the optional parameters
-		        boolean showDraft = false;
-		        if ("true".equals("false")) {
-		            showDraft = true;
-		        }
+		        //if null is passed, both drafts and none drafts are fetched
+		        Boolean showDraft = null;
 		
 		        try {
 		            startDate =  DatabaseHelpers.getSqlDateFromString(startDateStr, 0);
@@ -122,10 +126,10 @@ public class ChemonicsCustomCSVExport {
 		            startDate.toString();
 		        }
 		
-		        SubmissionStatus status = SubmissionStatus.parseHtmlParameter("none");
-		        if (status != null) {
-		            status.toString();
-		        }
+		        SubmissionStatus status = null; //SubmissionStatus.parseHtmlParameter("none");
+		        //if (status != null) {
+		            //status.toString();
+		        //}
 				System.out.println("From " + sdf.format(startDate));
 				System.out.println("To " + sdf.format(endDate));
 		        ChemonicsSurvey.ChemonicsSubmissionStatistics statistics = new ChemonicsSurvey(salesforceSurveyId).new ChemonicsSubmissionStatistics().getStatistics(salesforceSurveyId, startDate, endDate);

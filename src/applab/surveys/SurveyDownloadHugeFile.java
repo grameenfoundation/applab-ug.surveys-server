@@ -156,6 +156,12 @@ public class SurveyDownloadHugeFile extends ApplabServlet {
     private void generateCsv(HttpServletResponse response, SubmissionStatistics statistics, SubmissionStatus submissionStatus,
     		java.sql.Date startDate, java.sql.Date endDate, boolean basic, String salesforceId, boolean showDraft) throws IOException, SAXException,
             ParserConfigurationException, ParseException, SQLException, ClassNotFoundException {
+    	
+    	log("SubmissionStatus.NotReviewed " + statistics.getNumberOfSubmissions(SubmissionStatus.NotReviewed) );
+    	log("SubmissionStatus.Pending " + statistics.getNumberOfSubmissions(SubmissionStatus.Pending) );
+    	log("SubmissionStatus.Approved " + statistics.getNumberOfSubmissions(SubmissionStatus.Approved) );
+    	log("SubmissionStatus.Rejected " + statistics.getNumberOfSubmissions(SubmissionStatus.Rejected) );
+    	log("SubmissionStatus.Duplicate " + statistics.getNumberOfSubmissions(SubmissionStatus.Duplicate) );
 
     	log("writing CSV...");
     	PrintWriter writer = response.getWriter();
@@ -203,9 +209,9 @@ public class SurveyDownloadHugeFile extends ApplabServlet {
         log("header written");
         writer.flush();
         //int flushConter = 0;
-        log("fetching submissions, this might take a while...");
+        log("fetching submissions, this might take a while... submissionStatus=" + submissionStatus.toString() + ", basic=" + basic + ", showDraft=" + showDraft);
         HashMap<Integer, Submission> submissions = statistics.getSurvey().loadSubmissions(submissionStatus, startDate, endDate, basic, showDraft);
-        log("...submissions loaded");
+        log("...submissions loaded = " + submissions.size());
         // Extract and save the answers
         for (int submissionId : statistics.getSurvey().getSubmissionOrder()) {
             //Submission submission = statistics.getSurvey().cachedSubmissions.get(submissionId);
@@ -300,9 +306,8 @@ public class SurveyDownloadHugeFile extends ApplabServlet {
 //            }
         }
 
-        writer.append('\n');
-        writer.append('\n');
-        writer.append("END");
+        //writer.append('\n');
+        //writer.append('\n');
         writer.flush();
         writer.close();
         // return fileName;

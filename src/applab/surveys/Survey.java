@@ -208,7 +208,7 @@ public class Survey {
 
     public HashMap<Integer, Submission> getSubmissions(
                                                        SubmissionStatus submissionFilter, java.sql.Date startDate,
-                                                       java.sql.Date endDate, boolean basic, boolean showDraft) throws ClassNotFoundException, SQLException,
+                                                       java.sql.Date endDate, boolean basic, Boolean showDraft) throws ClassNotFoundException, SQLException,
             ParseException, SAXException, IOException,
             ParserConfigurationException {
 
@@ -668,7 +668,7 @@ public class Survey {
 
     HashMap<Integer, Submission> loadSubmissions(SubmissionStatus statusFilter,
                                                  java.sql.Date startDate, java.sql.Date endDate, boolean basic,
-                                                 boolean showDraft)
+                                                 Boolean showDraft)
             throws ClassNotFoundException, SQLException, ParseException,
             SAXException, IOException, ParserConfigurationException {
         // Build the query that gets the submissions for a given survey, status
@@ -703,7 +703,9 @@ public class Survey {
         }
 
         commandText.append(" WHERE s.survey_id = ? ");
-        commandText.append(" AND s.is_draft = ?");
+        if(showDraft != null) {
+        	commandText.append(" AND s.is_draft = ?");
+        }
 
         if (!basic) {
             commandText.append(" AND a.submission_id = s.id ");
@@ -735,11 +737,14 @@ public class Survey {
         preparedStatement.setInt(index, getPrimaryKey());
         index++;
 
-        if (showDraft) {
-            preparedStatement.setString(index, "Y");
-        }
-        else {
-            preparedStatement.setString(index, "N");
+        if (showDraft != null) {
+            //both drafts and none drafts will be fetched
+	        if (showDraft) {
+	            preparedStatement.setString(index, "Y");
+	        }
+	        else {
+	            preparedStatement.setString(index, "N");
+	        }
         }
         index++;
 

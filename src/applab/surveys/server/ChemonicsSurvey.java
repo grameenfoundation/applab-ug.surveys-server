@@ -10,9 +10,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.logging.LogManager;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.rpc.ServiceException;
@@ -215,7 +218,7 @@ public class ChemonicsSurvey extends Survey {
 
     public HashMap<Integer, Submission> getSubmissions(
                                                        SubmissionStatus submissionFilter, java.util.Date startDate,
-                                                       java.sql.Date endDate, boolean basic, boolean showDraft) throws ClassNotFoundException, SQLException,
+                                                       java.sql.Date endDate, boolean basic, Boolean showDraft) throws ClassNotFoundException, SQLException,
             ParseException, SAXException, IOException,
             ParserConfigurationException {
 
@@ -262,7 +265,7 @@ public class ChemonicsSurvey extends Survey {
      */
     public void loadSubmissions(SubmissionStatus submissionStatus,
                                 java.util.Date startDate, java.sql.Date endDate, boolean basic,
-                                String salesforceId, boolean showDraft)
+                                String salesforceId, Boolean showDraft)
             throws ClassNotFoundException, SQLException, ParseException,
             SAXException, IOException, ParserConfigurationException,
             ServiceException {
@@ -297,6 +300,7 @@ public class ChemonicsSurvey extends Survey {
         // parentDirectory.mkdirs();
         // }
 
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         // FileWriter writer = new FileWriter(targetFile);
         StringBuilder writer = new StringBuilder();
 
@@ -308,6 +312,7 @@ public class ChemonicsSurvey extends Survey {
         for (String questionBinding : this.backendSurveyXml.getQuestionOrder()) {          	
             writer.append(escapeAndQuoteForCsv(questionBinding) + ",");
         }
+        writer.append("server_entry_time,");
         writer.append('\n');
 
         System.out.println("submissions count " + this.submissionOrder.size());
@@ -363,6 +368,18 @@ public class ChemonicsSurvey extends Survey {
                     }                	
                 }
             }
+            String datef = "";
+            if(submission.getServerSubmissionTime() != null) {
+            	try {
+					datef = sdf.format(new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy").parse(submission.getServerSubmissionTime()));
+				} catch (ParseException e) {
+					e.printStackTrace();
+				}
+            }
+            else {
+            	datef = sdf.format(Calendar.getInstance().getTime());
+            }
+            writer.append(datef  + ',');
             writer.append('\n');
         }
         return writer.toString();
@@ -371,14 +388,12 @@ public class ChemonicsSurvey extends Survey {
     public String escapeAndQuoteForCsv(String value)
     {
     	if (value != null) {
-    		String s = value.replace(String.valueOf('"'), String.valueOf('"') + String.valueOf('"'));
+    		String s = value.replace(String.valueOf(','), String.valueOf(' '));
+    		s = value.replace(Character.valueOf('\n'), Character.valueOf(' '));
     		//return '"' + s + '"';
-    		if(s == null || s.equals("")) {
-    			s = "NULL";
-    		}
     		return s;
     	}
-    	return "NULL";
+    	return "";
     }
     
     public boolean loadSurvey(boolean getFromSalesforce)
@@ -637,7 +652,7 @@ public class ChemonicsSurvey extends Survey {
 
     HashMap<Integer, Submission> loadSubmissions(SubmissionStatus statusFilter,
                                                  java.util.Date startDate, java.sql.Date endDate, boolean basic,
-                                                 boolean showDraft)
+                                                 Boolean showDraft)
             throws ClassNotFoundException, SQLException, ParseException,
             SAXException, IOException, ParserConfigurationException {
         // Build the query that gets the submissions for a given survey, status
@@ -672,7 +687,9 @@ public class ChemonicsSurvey extends Survey {
         }
 
         commandText.append(" WHERE s.survey_id = ? ");
-        commandText.append(" AND s.is_draft = ?");
+        if(showDraft != null) {
+        	commandText.append(" AND s.is_draft = ?");
+        }
 
         if (!basic) {
             commandText.append(" AND a.submission_id = s.id ");
@@ -696,21 +713,23 @@ public class ChemonicsSurvey extends Survey {
                     .append(", a.submission_id, a.question_number, a.position");
         }
 
-        PreparedStatement preparedStatement = connection
-                .prepareStatement(commandText.toString());
+        PreparedStatement preparedStatement = connection.prepareStatement(commandText.toString());
 
         // Pass in the arguments required
-        int index = 1;
+        int index = 1; 
         preparedStatement.setInt(index, getPrimaryKey());
         index++;
 
-        if (showDraft) {
-            preparedStatement.setString(index, "Y");
+        if(showDraft != null) {
+	        if (showDraft) {
+	            preparedStatement.setString(index, "Y");
+	        }
+	        else {
+	            preparedStatement.setString(index, "N");
+	        }
+	        System.out.println("showdraft set");
+	        index++;
         }
-        else {
-            preparedStatement.setString(index, "N");
-        }
-        index++;
 
         // Add the status filter if needed
         if (statusFilter != null) {
@@ -723,9 +742,6 @@ public class ChemonicsSurvey extends Survey {
 
             Calendar startCalendar = Calendar.getInstance();
             startCalendar.setTime(startDate);
-            startCalendar.set(Calendar.HOUR_OF_DAY, 0);
-            startCalendar.set(Calendar.MINUTE, 0);
-            startCalendar.set(Calendar.SECOND, 0);
             Timestamp startTimeStamp = new Timestamp(startCalendar.getTimeInMillis());
             preparedStatement.setTimestamp(index, startTimeStamp);
             index++;
